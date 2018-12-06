@@ -1,0 +1,15 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.example.android.notekeeper.NoteActivity">
+    <item
+        android:id="@+id/action_cancel"
+        android:orderInCategory="100"
+        android:title="Cancel" />
+    <item
+        android:id="@+id/action_send_mail"
+        android:enabled="true"
+        android:orderInCategory="101"
+        android:title="@string/action_send_mail"
+        app:showAsAction="never" />
+</menu>

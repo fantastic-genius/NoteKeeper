@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">NoteKeeper</string>
+    <string name="action_send_mail">Send as email</string>
+    <string name="title_activity_note">NoteListActivity</string>
+</resources>
