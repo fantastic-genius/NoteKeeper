@@ -2,6 +2,7 @@ package com.example.android.notekeeper;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
@@ -32,6 +33,7 @@ public class MainActivity extends AppCompatActivity
     private LinearLayoutManager mNotesLayoutManager;
     private CourseRecyclerAdapter mCourseRecyclerAdapter;
     private GridLayoutManager mGridLayoutManager;
+    private NoteKeeperOpenHelper mDBOpenHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,6 +41,8 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        mDBOpenHelper = new NoteKeeperOpenHelper(this);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -72,6 +76,12 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    @Override
+    protected void onDestroy() {
+        mDBOpenHelper.close();
+        super.onDestroy();
+    }
+
     private void updateNavHeader() {
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         View headerView = navigationView.getHeaderView(0);
@@ -84,10 +94,11 @@ public class MainActivity extends AppCompatActivity
         String emailAddress = pref.getString("user_email_address", "");
 
         textUserName.setText(userName);
-        //textEmailAddress.setText(emailAddress);
+        textEmailAddress.setText(emailAddress);
     }
 
     private void initializeDisplayContent() {
+        DataManager.loadFromDatabase(mDBOpenHelper);
 
         mRecyclerItems = (RecyclerView) findViewById(R.id.list_items);
         mNotesLayoutManager = new LinearLayoutManager(this);
