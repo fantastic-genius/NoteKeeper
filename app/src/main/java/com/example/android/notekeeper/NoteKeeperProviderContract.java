@@ -42,7 +42,7 @@ public final class NoteKeeperProviderContract {
 
         //this is to take care of additional column info from the courses table ,
         // reason for implementing CoursesColumns interface in the notes class
-        public static final String EXPANDED_PATH = "notes_expanded";
-        public static final Uri CONTENT_EXPANDED_URI = Uri.withAppendedPath(AUTHORITY_URI, EXPANDED_PATH);
+        public static final String PATH_EXPANDED = "notes_expanded";
+        public static final Uri CONTENT_EXPANDED_URI = Uri.withAppendedPath(AUTHORITY_URI, PATH_EXPANDED);
     }
 }

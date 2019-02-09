@@ -1,5 +1,6 @@
 package com.example.android.notekeeper;
 
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
@@ -20,6 +21,7 @@ import android.widget.TextView;
 
 import com.example.android.notekeeper.NoteKeeperDatabaseContract.*;
 import com.example.android.notekeeper.NoteKeeperProviderContract.Courses;
+import com.example.android.notekeeper.NoteKeeperProviderContract.Notes;
 
 public class NoteActivity extends AppCompatActivity
     implements LoaderManager.LoaderCallbacks<Cursor>{
@@ -50,6 +52,7 @@ public class NoteActivity extends AppCompatActivity
     private SimpleCursorAdapter mAdapterCourses;
     private Boolean mCoursesQueryFinished;
     private Boolean mNotesQueryFinished = false;
+    private Uri mNoteUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -212,8 +215,11 @@ public class NoteActivity extends AppCompatActivity
         values.put(NoteInfoEntry.COLUMN_NOTE_TITLE, "");
         values.put(NoteInfoEntry.COLUMN_NOTE_TEXT, "");
 
-        SQLiteDatabase db = mDbOpenHelper.getWritableDatabase();
-        mNoteId = (int) db.insert(NoteInfoEntry.TABLE_NAME, null, values);
+        mNoteUri = getContentResolver().insert(Notes.CONTENT_URI, values);
+
+        //Interting to database by interacting directly with db
+//        SQLiteDatabase db = mDbOpenHelper.getWritableDatabase();
+//        mNoteId = (int) db.insert(NoteInfoEntry.TABLE_NAME, null, values);
     }
 
     private void displayNote() {
@@ -280,9 +286,18 @@ public class NoteActivity extends AppCompatActivity
             finish();
         } else if(id == R.id.action_next){
             moveNext();
+        } else if(id == R.id.action_set_reminder){
+            showReminderNotification();
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void showReminderNotification() {
+        String noteTitle = mTextNoteTitle.getText().toString();
+        String noteText = mTextNoteText.getText().toString();
+        int noteId = (int) ContentUris.parseId(mNoteUri);
+        NoteReminderNotification.notify(this, noteTitle, noteText, noteId);
     }
 
     @Override
@@ -354,22 +369,31 @@ public class NoteActivity extends AppCompatActivity
 
     private CursorLoader createLoaderNotes() {
         mNotesQueryFinished = false;
-        return new CursorLoader(this){
-            @Override
-            public Cursor loadInBackground() {
-                SQLiteDatabase db = mDbOpenHelper.getReadableDatabase();
 
-                String selection = NoteInfoEntry._ID + " = ?";
+        String[] noteColumns = {NoteInfoEntry.COLUMN_COURSE_ID,
+                NoteInfoEntry.COLUMN_NOTE_TITLE,
+                NoteInfoEntry.COLUMN_NOTE_TEXT};
 
-                String[] selectionArgs = {Integer.toString(mNoteId)};
+        mNoteUri = ContentUris.withAppendedId(Notes.CONTENT_URI, mNoteId);
+        return new CursorLoader(this, mNoteUri, noteColumns, null, null, null);
 
-                String[] noteColumn = {NoteInfoEntry.COLUMN_COURSE_ID,
-                        NoteInfoEntry.COLUMN_NOTE_TITLE,
-                        NoteInfoEntry.COLUMN_NOTE_TEXT};
-
-                return db.query(NoteInfoEntry.TABLE_NAME, noteColumn, selection, selectionArgs, null, null, null);
-            }
-        };
+        //What is used to load note directly before usung content provider
+//        return new CursorLoader(this){
+//            @Override
+//            public Cursor loadInBackground() {
+//                SQLiteDatabase db = mDbOpenHelper.getReadableDatabase();
+//
+//                String selection = NoteInfoEntry._ID + " = ?";
+//
+//                String[] selectionArgs = {Integer.toString(mNoteId)};
+//
+//                String[] noteColumn = {NoteInfoEntry.COLUMN_COURSE_ID,
+//                        NoteInfoEntry.COLUMN_NOTE_TITLE,
+//                        NoteInfoEntry.COLUMN_NOTE_TEXT};
+//
+//                return db.query(NoteInfoEntry.TABLE_NAME, noteColumn, selection, selectionArgs, null, null, null);
+//            }
+//        };
     }
 
     @Override

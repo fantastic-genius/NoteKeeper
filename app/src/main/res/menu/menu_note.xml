@@ -21,4 +21,10 @@
         android:orderInCategory="102"
         android:title="@string/action_send_mail"
         app:showAsAction="never" />
+    <item
+        android:id="@+id/action_set_reminder"
+        android:enabled="true"
+        android:orderInCategory="103"
+        android:title="@string/action_set_reminder"
+        app:showAsAction="never"/>
 </menu>
