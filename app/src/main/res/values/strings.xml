@@ -115,4 +115,5 @@
         viverra rhoncus sit amet nec magna. Donec lacinia ligula at libero volutpat volutpat nec nec
         tortor.
     </string>
+    <string name="action_backup_notes">Backup Notes</string>
 </resources>

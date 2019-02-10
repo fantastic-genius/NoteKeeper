@@ -52,6 +52,9 @@ public class NoteReminderNotification {
         Intent noteActivityIntent = new Intent(context, NoteActivity.class);
         noteActivityIntent.putExtra(NoteActivity.NOTE_ID, noteId);
 
+        Intent backupServiceIntent = new Intent(context, NoteBackupService.class);
+        backupServiceIntent.putExtra(NoteBackupService.EXTRA_COURSE_ID, NoteBackup.ALL_COURSES);
+
         final NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
 
                 // Set appropriate defaults for the notification light, sound,
@@ -107,6 +110,15 @@ public class NoteReminderNotification {
                                 context,
                                 0,
                                 new Intent(context, MainActivity.class),
+                                PendingIntent.FLAG_UPDATE_CURRENT))
+
+                .addAction(
+                        0,
+                        "Backup notes",
+                        PendingIntent.getService(
+                                context,
+                                0,
+                                backupServiceIntent,
                                 PendingIntent.FLAG_UPDATE_CURRENT))
 
                 // Automatically dismiss the notification when it is touched.
