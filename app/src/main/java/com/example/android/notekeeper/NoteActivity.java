@@ -36,6 +36,7 @@ public class NoteActivity extends AppCompatActivity
     public static final String ORIGINAL_NOTE_COURSE_ID = "com.example.android.notekeeper.ORIGINAL_NOTE_COURSE_ID";
     public static final String ORIGINAL_NOTE_TITLE = "com.example.android.notekeeper.ORIGINAL_NOTE_TITLE";
     public static final String ORIGINAL_NOTE_TEXT = "com.example.android.notekeeper.ORIGINAL_NOTE_TEXT";
+    public static final String NOTE_URI = "com.example.android.notekeeper.NOTE_URI";
 
     public static final int ID_NOT_SET = -1;
     public static final int LOADER_NOTES = 0;
@@ -60,6 +61,7 @@ public class NoteActivity extends AppCompatActivity
     private Boolean mCoursesQueryFinished;
     private Boolean mNotesQueryFinished = false;
     private Uri mNoteUri;
+    private ModuleStatusView mModuleStatusView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +87,8 @@ public class NoteActivity extends AppCompatActivity
             saveOriginalNoteValues();
         }else{
             restoreOriginalNoteValues(savedInstanceState);
+            String stringNoteUri = savedInstanceState.getString(NOTE_URI);
+            mNoteUri = Uri.parse(stringNoteUri);
         }
 
         mTextNoteTitle = (TextView) findViewById(R.id.text_note_title);
@@ -94,6 +98,13 @@ public class NoteActivity extends AppCompatActivity
            getLoaderManager().initLoader(
                    LOADER_NOTES, null, this);
         }
+
+        mModuleStatusView = (ModuleStatusView) findViewById(R.id.module_status);
+        loadModuleStatus();
+    }
+
+    private void loadModuleStatus() {
+        //In real life we would lookup the selected module status fromcontenet reslover
     }
 
     private void loadCourses() {
@@ -185,6 +196,7 @@ public class NoteActivity extends AppCompatActivity
         outState.putString(ORIGINAL_NOTE_COURSE_ID, mOriginalNoteCourseId);
         outState.putString(ORIGINAL_NOTE_TITLE, mOriginalNoteTitle);
         outState.putString(ORIGINAL_NOTE_TEXT, mOriginalNoteText);
+        outState.putString(NOTE_URI, mNoteUri.toString());
     }
 
     private void saveNote() {
@@ -204,16 +216,13 @@ public class NoteActivity extends AppCompatActivity
     }
 
     private void saveNoteToDatabase(String courseId, String noteTitle, String noteText){
-        String selection = NoteInfoEntry._ID + " = ?";
-        String[] selectionArgs = {Integer.toString(mNoteId)};
 
         ContentValues values = new ContentValues();
-        values.put(NoteInfoEntry.COLUMN_COURSE_ID, courseId);
-        values.put(NoteInfoEntry.COLUMN_NOTE_TITLE, noteTitle);
-        values.put(NoteInfoEntry.COLUMN_NOTE_TEXT, noteText);
+        values.put(Notes.COLUMN_COURSE_ID, courseId);
+        values.put(Notes.COLUMN_NOTE_TITLE, noteTitle);
+        values.put(Notes.COLUMN_NOTE_TEXT, noteText);
 
-        SQLiteDatabase db = mDbOpenHelper.getWritableDatabase();
-        db.update(NoteInfoEntry.TABLE_NAME, values, selection, selectionArgs);
+        getContentResolver().update(mNoteUri, values, null, null);
     }
 
     private void createNewNote() {
