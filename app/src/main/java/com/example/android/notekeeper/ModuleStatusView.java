@@ -7,14 +7,27 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.support.annotation.IntDef;
+import android.support.annotation.Nullable;
+import android.support.v4.view.ViewCompat;
+import android.support.v4.view.accessibility.AccessibilityNodeInfoCompat;
+import android.support.v4.widget.ExploreByTouchHelper;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
+
+import java.util.List;
 
 /**
  * TODO: document your custom view class.
  */
 public class ModuleStatusView extends View {
     public static final int EDIT_MODE_MODULE_COUNT = 7;
+    public static final int INVALID_INDEX = -1;
+    public static final int SHAPE_CIRCLE = 0;
     private String mExampleString; // TODO: use a default from R.string...
     private int mExampleColor = Color.RED; // TODO: use a default from R.color...
     private float mExampleDimension = 0; // TODO: use a default from R.dimen...
@@ -22,13 +35,16 @@ public class ModuleStatusView extends View {
     private float mSpacing;
     private float mShapeSize;
     private float mOutlineWidth;
-    private Rect[] mModuleRectangle;
+    private Rect[] mModuleRectangles;
     private Paint mPaintOutline;
     private int mOutlineColor;
     private Paint mPaintFill;
     private int mFillColor;
     private float mRadius;
     private int mMaxHorizontalModule;
+    private int mShape;
+    private static float DEFAULT_OUTLINE_WIDTH_DP = 2f;
+    private ModuleAccessibilityHelper mAccessibilityHelper;
 
 
     public boolean[] getModuleStatus() {
@@ -59,19 +75,28 @@ public class ModuleStatusView extends View {
     private void init(AttributeSet attrs, int defStyle) {
         if(isInEditMode())
             setupEditModuleValues();
+        DisplayMetrics dm = getContext().getResources().getDisplayMetrics();
+        float displayDensity = dm.density;
+        float defaultOutlineWidthPixels = displayDensity * DEFAULT_OUTLINE_WIDTH_DP;
+
+        setFocusable(true);
+        mAccessibilityHelper = new ModuleAccessibilityHelper(this);
+        ViewCompat.setAccessibilityDelegate(this, mAccessibilityHelper);
 
         // Load attributes
         final TypedArray a = getContext().obtainStyledAttributes(
                 attrs, R.styleable.ModuleStatusView, defStyle, 0);
 
+        mOutlineColor = a.getColor(R.styleable.ModuleStatusView_outlineColor, Color.BLACK);
+        mShape = a.getInt(R.styleable.ModuleStatusView_shape, SHAPE_CIRCLE);
+        mOutlineWidth = a.getDimension(R.styleable.ModuleStatusView_outlineWidth, defaultOutlineWidthPixels);
+
         a.recycle();
 
-        mOutlineWidth = 6f;
         mShapeSize = 144f;
         mSpacing = 30f;
         mRadius = (mShapeSize - mOutlineWidth)/2;
 
-        mOutlineColor = Color.BLACK;
         mPaintOutline = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaintOutline.setStyle(Paint.Style.STROKE);
         mPaintOutline.setStrokeWidth(mOutlineWidth);
@@ -81,6 +106,22 @@ public class ModuleStatusView extends View {
         mPaintFill = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaintFill.setStyle(Paint.Style.FILL);
         mPaintFill.setColor(mFillColor);
+    }
+
+    @Override
+    protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        mAccessibilityHelper.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+    }
+
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        return mAccessibilityHelper.dispatchKeyEvent(event) || super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    protected boolean dispatchHoverEvent(MotionEvent event) {
+        return mAccessibilityHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event);
     }
 
     private void setupEditModuleValues() {
@@ -99,13 +140,13 @@ public class ModuleStatusView extends View {
         int horizontalModuleThatCanFit = (int) (availableWidth / (mShapeSize + mSpacing));
         int maxHorizontalModule = Math.min(horizontalModuleThatCanFit, mModuleStatus.length);
 
-        mModuleRectangle = new Rect[mModuleStatus.length];
+        mModuleRectangles = new Rect[mModuleStatus.length];
         for (int moduleIndex = 0; moduleIndex < mModuleStatus.length; moduleIndex++){
             int column = moduleIndex % maxHorizontalModule;
             int row = moduleIndex / maxHorizontalModule;
             int x = getPaddingLeft() + (int) (column * (mShapeSize + mSpacing));
             int y = getPaddingTop() + (int) (row * (mShapeSize + mSpacing));
-            mModuleRectangle[moduleIndex] = new Rect(x, y, x + (int) mShapeSize, y + (int) mShapeSize);
+            mModuleRectangles[moduleIndex] = new Rect(x, y, x + (int) mShapeSize, y + (int) mShapeSize);
         }
     }
 
@@ -142,33 +183,119 @@ public class ModuleStatusView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        for(int moduleIndex=0; moduleIndex < mModuleRectangle.length; moduleIndex++){
-            float x = mModuleRectangle[moduleIndex].centerX();
-            float y = mModuleRectangle[moduleIndex].centerY();
+        for(int moduleIndex = 0; moduleIndex < mModuleRectangles.length; moduleIndex++){
+            if(mShape == SHAPE_CIRCLE){
+                float x = mModuleRectangles[moduleIndex].centerX();
+                float y = mModuleRectangles[moduleIndex].centerY();
 
-            if(mModuleStatus[moduleIndex])
-                canvas.drawCircle(x, y, mRadius, mPaintFill);
+                if(mModuleStatus[moduleIndex])
+                    canvas.drawCircle(x, y, mRadius, mPaintFill);
 
-            canvas.drawCircle(x, y, mRadius, mPaintOutline);
+                canvas.drawCircle(x, y, mRadius, mPaintOutline);
+            }else{
+                drawSquare(canvas, moduleIndex);
+            }
+
         }
 
     }
 
-    /**
-     * Gets the example string attribute value.
-     *
-     * @return The example string attribute value.
-     */
-    public String getExampleString() {
-        return mExampleString;
+    private void drawSquare(Canvas canvas, int moduleIndex) {
+        Rect moduleRectangle = mModuleRectangles[moduleIndex];
+        if(mModuleStatus[moduleIndex])
+            canvas.drawRect(moduleRectangle, mPaintFill);
+
+        canvas.drawRect(moduleRectangle.left + (mOutlineWidth/2),
+                        moduleRectangle.top + (mOutlineWidth/2),
+                        moduleRectangle.right - (mOutlineWidth/2),
+                        moduleRectangle.bottom - (mOutlineWidth/2),
+                        mPaintOutline);
     }
 
-    /**
-     * Sets the view's example string attribute value. In the example view, this string
-     * is the text to draw.
-     *
-     * @param exampleString The example string attribute value to use.
-     */
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()){
+            case MotionEvent.ACTION_UP:
+                return true;
+            case MotionEvent.ACTION_DOWN:
+                int moduleIndex = findItemATPoint(event.getX(), event.getY());
+                onModuleSelected(moduleIndex);
+                return true;
+        }
+        return super.onTouchEvent(event);
+    }
+
+    private void onModuleSelected(int moduleIndex) {
+        if(moduleIndex == INVALID_INDEX)
+            return;
+
+        mModuleStatus[moduleIndex] = ! mModuleStatus[moduleIndex];
+        invalidate();
+
+        mAccessibilityHelper.invalidateVirtualView(moduleIndex);
+    }
+
+    private int findItemATPoint(float x, float y) {
+        int moduleIndex = INVALID_INDEX;
+        for(int i = 0; i < mModuleRectangles.length; i++){
+            if(mModuleRectangles[i].contains((int) x, (int) y)){
+                moduleIndex = i;
+                break;
+            }
+        }
+
+        return moduleIndex;
+    }
+
+    private class ModuleAccessibilityHelper extends ExploreByTouchHelper{
+
+        /**
+         * Constructs a new helper that can expose a virtual view hierarchy for the
+         * specified host view.
+         *
+         * @param host view whose virtual view hierarchy is exposed by this helper
+         */
+        public ModuleAccessibilityHelper(View host) {
+            super(host);
+        }
+
+        @Override
+        protected int getVirtualViewAt(float x, float y) {
+            int moduleIndex = findItemATPoint(x, y);
+            return moduleIndex == INVALID_INDEX ? ExploreByTouchHelper.INVALID_ID : moduleIndex ;
+        }
+
+        @Override
+        protected void getVisibleVirtualViews(List<Integer> virtualViewIds) {
+            if(mModuleRectangles == null)
+                return;
+            for(int moduleIndex=0; moduleIndex < mModuleRectangles.length; moduleIndex++)
+                virtualViewIds.add(moduleIndex);
+        }
+
+        @Override
+        protected void onPopulateNodeForVirtualView(int virtualViewId, AccessibilityNodeInfoCompat node) {
+            node.setFocusable(true);
+            node.setBoundsInParent(mModuleRectangles[virtualViewId]);
+            node.setContentDescription("Module " +  virtualViewId);
+
+            node.setCheckable(true);
+            node.setChecked(mModuleStatus[virtualViewId]);
+
+            node.addAction(AccessibilityNodeInfoCompat.ACTION_CLICK);
+
+        }
+
+        @Override
+        protected boolean onPerformActionForVirtualView(int virtualViewId, int action, Bundle arguments) {
+            switch (action){
+                case AccessibilityNodeInfoCompat.ACTION_CLICK:
+                    onModuleSelected(virtualViewId);
+                    return true;
+            }
+            return false;
+        }
+    }
 
 
 }

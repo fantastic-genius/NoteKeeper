@@ -104,7 +104,14 @@ public class NoteActivity extends AppCompatActivity
     }
 
     private void loadModuleStatus() {
-        //In real life we would lookup the selected module status fromcontenet reslover
+        //In real life we would lookup the selected module status from contentreslover
+
+        int totalNumberOfModules = 11;
+        int completedNumberOfModules = 7;
+        boolean[] moduleStatus = new boolean[totalNumberOfModules];
+        for (int moduleIndex=0; moduleIndex < completedNumberOfModules; moduleIndex++)
+            moduleStatus[moduleIndex] = true;
+        mModuleStatusView.setModuleStatus(moduleStatus);
     }
 
     private void loadCourses() {
